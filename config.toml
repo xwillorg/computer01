@@ -1,0 +1,33 @@
+# Computer 0 <-> Computer 1. API keys come from env vars only:
+# OPENAI_API_KEY, PERPLEXITY_API_KEY (search engines, step 2). The brain runs through the pi harness.
+
+[run]
+end_date = "2026-12-31"
+poll_minutes = 60
+pages_per_day = 3          # per computer, content rule
+escalate_after = 5         # messages without latency improvement before going up one level
+lost_after_hours = 72      # in-flight message given up after this
+fluent_streak = 10
+fluent_max_hours = 24
+
+[brain]
+provider = "pi"            # "stub" = offline, free. Sim mode uses stub unless --brain pi
+model = "openai-codex/gpt-5.6-terra"   # via pi; only some models work on a ChatGPT account. `pi --list-models`
+thinking = "low"
+max_usd_per_day = 2.0      # brain (pi-reported) + engine queries, per real UTC day; then brain uses stub, polling pauses
+
+[publish]                  # GitHub Pages, one repo per computer
+owner = "xwillorg"
+repos = ["computer0", "computer1"]
+
+[engines]                  # real engines switch on when their env var is set
+openai_model = "gpt-5-mini"
+perplexity_model = "sonar"
+usd_per_query = { openai = 0.03, perplexity = 0.01 }   # rough estimate incl. search fee, counts toward max_usd_per_day
+
+[sim]
+engines = ["sim-a", "sim-b"]
+median_hours = 36          # median indexing delay at reach 0; divided by (1 + reach)
+sigma = 0.8                # lognormal spread
+miss = 0.3                 # chance an engine answers without the page
+corrupt = 0.15             # chance an answer garbles one character of a message line

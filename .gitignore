@@ -1,0 +1,5 @@
+sim/
+log/
+sites/
+__pycache__/
+.claude/

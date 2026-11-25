@@ -20,10 +20,13 @@ max_usd_per_day = 2.0      # brain (pi-reported) + engine queries, per real UTC 
 owner = "xwillorg"
 repos = ["computer0", "computer1"]
 
-[engines]                  # real engines switch on when their env var is set
+[engines]
+use = ["chatgpt", "openai", "perplexity"]   # chatgpt needs `codex` logged in; the others switch on when their env var is set
+queries_per_poll = 1       # per engine, rotating through the brain's queries (codex runs take ~1-2 min each)
+chatgpt_model = "gpt-5.6-terra"
 openai_model = "gpt-5-mini"
 perplexity_model = "sonar"
-usd_per_query = { openai = 0.03, perplexity = 0.01 }   # rough estimate incl. search fee, counts toward max_usd_per_day
+usd_per_query = { chatgpt = 0.0, openai = 0.03, perplexity = 0.01 }   # rough estimate incl. search fee, counts toward max_usd_per_day
 
 [sim]
 engines = ["sim-a", "sim-b"]

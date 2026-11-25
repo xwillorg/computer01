@@ -6,8 +6,11 @@ import math
 import os
 import random
 import re
+import shutil
+import subprocess
 import urllib.request
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 
 def _parse(s):
@@ -91,11 +94,35 @@ def perplexity(cfg):
     return ask
 
 
-# name -> (env var that switches it on, factory). Add an engine here.
-REAL = {"openai": ("OPENAI_API_KEY", openai_search), "perplexity": ("PERPLEXITY_API_KEY", perplexity)}
+def chatgpt_search(cfg):
+    """ChatGPT web search through the Codex CLI, on the ChatGPT subscription it is logged in to."""
+    cwd = Path(__file__).resolve().parent / "log" / "codex-cwd"  # empty dir, read-only sandbox
+    cwd.mkdir(parents=True, exist_ok=True)
+
+    def ask(query):
+        p = subprocess.run(
+            ["codex", "--search", "exec", "--json", "--ephemeral", "--skip-git-repo-check", "--ignore-user-config",
+             "-s", "read-only", "-C", str(cwd), "-m", cfg["chatgpt_model"],
+             "Answer using web search only; do not run shell commands. Quote relevant text exactly "
+             "and list source URLs.\n\nQuestion: " + query],
+            capture_output=True, text=True, timeout=900, stdin=subprocess.DEVNULL)
+        msgs = [r["item"]["text"] for r in map(json.loads, p.stdout.splitlines())
+                if r.get("type") == "item.completed" and r["item"].get("type") == "agent_message"]
+        if not msgs:
+            raise RuntimeError(f"codex exit {p.returncode}: {p.stderr[-500:]}")
+        return msgs[-1], re.findall(r"https?://[^\s)\]>\"'*]+", msgs[-1])
+    return ask
+
+
+# name -> (check that switches it on, factory). Add an engine here and to [engines] use.
+REAL = {
+    "chatgpt": (lambda: shutil.which("codex"), chatgpt_search),
+    "openai": (lambda: os.environ.get("OPENAI_API_KEY"), openai_search),
+    "perplexity": (lambda: os.environ.get("PERPLEXITY_API_KEY"), perplexity),
+}
 
 
 def make(cfg, sim, now, web):
     if sim:
         return {n: Sim(n, cfg["sim"], now, web).ask for n in cfg["sim"]["engines"]}
-    return {n: f(cfg["engines"]) for n, (env, f) in REAL.items() if os.environ.get(env)}
+    return {n: f(cfg["engines"]) for n, (ok, f) in REAL.items() if n in cfg["engines"]["use"] and ok()}

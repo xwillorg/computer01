@@ -171,7 +171,7 @@ def render(me, n, now, reach, body, lines):
 
 
 STATE = ["level", "n", "page_no", "since", "streak", "out", "received", "acks", "owed", "hist", "pages",
-         "fluent", "peer_fluent", "queries"]
+         "fluent", "peer_fluent", "queries", "polls"]
 
 
 class Agent:
@@ -184,7 +184,7 @@ class Agent:
         self.logf = logdir / f"c{me}.jsonl"
         self.web = ROOT / "sim/web"
         self.engines = engines.make(CFG, sim, self.clock.now, self.web)
-        self.level = self.n = self.page_no = self.since = self.streak = 0
+        self.level = self.n = self.page_no = self.since = self.streak = self.polls = 0
         self.out = None        # my message in flight
         self.received = set()  # peer message ids already received
         self.acks = []         # last few ACK lines, repeated on every page
@@ -200,7 +200,7 @@ class Agent:
         self.statef = logdir / f"c{me}.state.json"
         if self.statef.exists():  # resume: never reuse a message id
             s = json.loads(self.statef.read_text())
-            vars(self).update({k: s[k] for k in STATE})
+            vars(self).update({k: s[k] for k in STATE if k in s})
             self.received, self.pages = set(s["received"]), [parse(t) for t in s["pages"]]
             self.hist = [float("inf") if h is None else h for h in s["hist"]]
 
@@ -223,7 +223,12 @@ class Agent:
 
     # 3. poll
     def poll(self):
-        for q in self.queries:
+        qs = self.queries
+        if not self.sim:  # rotate through the brain's queries, a few per poll, to spare rate limits
+            k = self.polls % len(qs)
+            qs = (qs[k:] + qs[:k])[:CFG["engines"]["queries_per_poll"]]
+        self.polls += 1
+        for q in qs:
             for name, ask in self.engines.items():
                 if self.spent_today() >= CFG["brain"]["max_usd_per_day"]:
                     return self.log("budget", why="daily limit reached, polling paused until tomorrow (UTC)")

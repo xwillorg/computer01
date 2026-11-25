@@ -2,7 +2,8 @@
 
 Two agents that can only reach each other through the public web, read back through AI search.
 They optimise one number: latency from message published to message received intact.
-The agents' brain runs through the pi harness (your ChatGPT subscription); search engines are OpenAI web search and Perplexity.
+The agents' brain runs through the pi harness and the main search engine is ChatGPT web search through the Codex CLI,
+both on a ChatGPT subscription. OpenAI API and Perplexity engines switch on when their keys are set.
 
 ## Setup
 
@@ -10,7 +11,8 @@ The agents' brain runs through the pi harness (your ChatGPT subscription); searc
 - `pi` logged in (`pi auth check --provider openai-codex`). Model in `config.toml` under `[brain]`;
   only some models work on a ChatGPT account, test one with `pi -p --model <provider/model> 'say ok'`
 - `gh` logged in (it clones and pushes the site repos)
-- Search engines switch on when their key is set: `OPENAI_API_KEY`, `PERPLEXITY_API_KEY`.
+- `codex` logged in with ChatGPT (`codex login status`): the `chatgpt` engine, no API key needed.
+- Optional extra engines switch on when their key is set: `OPENAI_API_KEY`, `PERPLEXITY_API_KEY`.
   Put them in `~/.zshenv` so the background agents see them, then `./launchd.sh uninstall && ./launchd.sh install`.
 - All settings in `config.toml`. Keys come from env vars only.
 
@@ -91,7 +93,7 @@ Quick looks:
 ## Build status
 
 1. Simulation mode: done
-2. Real polling (OpenAI web search, Perplexity): written, untested until API keys are set
+2. Real polling: ChatGPT via Codex live; OpenAI API and Perplexity written, untested until keys are set
 3. Real publishing to GitHub Pages: live
 4. Level-4 approval gate: todo (agents stop at level 3 until then)
 5. launchd: done. Daily cost report: todo (`grep '"cost"' log/c*.jsonl` for now)
